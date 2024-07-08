@@ -11,7 +11,7 @@ import (
 func main() {
 	http.HandleFunc("/", SAMLServer)
 	log.Printf("Starting HTTP server at 127.0.0.1:35001")
-	http.ListenAndServe("127.0.0.1:35001", nil)
+	http.ListenAndServe("0.0.0.0:35001", nil)
 }
 
 func SAMLServer(w http.ResponseWriter, r *http.Request) {

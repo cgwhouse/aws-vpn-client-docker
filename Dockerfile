@@ -41,7 +41,7 @@ RUN go build server.go
 
 FROM ubuntu:20.04
 
-ENV TZ="America/Sao_Paulo"
+ENV TZ="Europe/Madrid"
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update && \
