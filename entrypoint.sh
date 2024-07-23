@@ -10,10 +10,10 @@ sed -i '/^auth-user-pass.*$/d' /vpn.modified.conf
 sed -i '/^auth-federate.*$/d' /vpn.modified.conf
 sed -i '/^auth-retry.*$/d' /vpn.modified.conf
 
-echo "" >> /vpn.modified.conf
-echo "script-security 2" >> /vpn.modified.conf
-echo "up /etc/openvpn/scripts/update-resolv-conf" >> /vpn.modified.conf
-echo "down /etc/openvpn/scripts/update-resolv-conf" >> /vpn.modified.conf
+echo "" >>/vpn.modified.conf
+echo "script-security 2" >>/vpn.modified.conf
+echo "up /etc/openvpn/scripts/update-resolv-conf" >>/vpn.modified.conf
+echo "down /etc/openvpn/scripts/update-resolv-conf" >>/vpn.modified.conf
 
 export CERT="-----BEGIN CERTIFICATE-----
 MIID7zCCAtegAwIBAgIBADANBgkqhkiG9w0BAQsFADCBmDELMAkGA1UEBhMCVVMx
@@ -48,17 +48,19 @@ PROTO=$(cat /vpn.modified.conf | grep "proto " | cut -d " " -f2)
 
 echo "Connecting to $VPN_HOST on port $PORT/$PROTO"
 wait_file() {
-  local file="$1"; shift
-  local wait_seconds="${1:-10}"; shift # 10 seconds as default timeout
-  until test $((wait_seconds--)) -eq 0 -o -f "$file" ; do sleep 1; done
-  ((++wait_seconds))
+	local file="$1"
+	shift
+	local wait_seconds="${1:-10}"
+	shift # 10 seconds as default timeout
+	until test $((wait_seconds--)) -eq 0 -o -f "$file"; do sleep 1; done
+	((++wait_seconds))
 }
 
 # create random hostname prefix for the vpn gw
 RAND=$(openssl rand -hex 12)
 
 # resolv manually hostname to IP, as we have to keep persistent ip address
-SRV=$(dig a +short "${RAND}.${VPN_HOST}"|head -n1)
+SRV=$(dig a +short "${RAND}.${VPN_HOST}" | head -n1)
 sed -i '/^remote .*$/d' /vpn.modified.conf
 sed -i '/^remote-random-hostname.*$/d' /vpn.modified.conf
 
@@ -66,10 +68,10 @@ sed -i '/^remote-random-hostname.*$/d' /vpn.modified.conf
 rm -f saml-response.txt
 echo "Getting SAML redirect URL from the AUTH_FAILED response (host: ${SRV}:${PORT})..."
 OVPN_OUT=$(/openvpn --config /vpn.modified.conf --verb 3 \
-     --proto "$PROTO" --remote "${SRV}" "${PORT}" \
-     --auth-user-pass <( printf "%s\n%s\n" "N/A" "ACS::35001" ) \
-    2>&1 | grep AUTH_FAILED,CRV1)
-echo $OVPN_OUT
+	--proto "$PROTO" --remote "${SRV}" "${PORT}" \
+	--auth-user-pass <(printf "%s\n%s\n" "N/A" "ACS::35001") \
+	2>&1 | grep AUTH_FAILED,CRV1)
+echo "$OVPN_OUT"
 
 URL=$(echo "$OVPN_OUT" | grep -Eo 'https://.+')
 echo ""
@@ -77,11 +79,11 @@ echo ""
 echo "Open this URL in your browser and log in (ctrl + click):"
 echo ""
 echo ""
-echo $URL
+echo "$URL"
 sleep 1
 wait_file "saml-response.txt" 60 || {
-  echo "SAML Authentication timed out"
-  exit 1
+	echo "SAML Authentication timed out"
+	exit 1
 }
 
 # get SID from the reply
@@ -92,9 +94,9 @@ echo "Running OpenVPN."
 # Finally OpenVPN with a SAML response we got
 # Delete saml-response.txt after connect
 exec /openvpn --config /vpn.modified.conf \
-              --verb 3 --auth-nocache --inactive 3600 \
-              --proto $PROTO --remote $SRV $PORT \
-              --script-security 2 \
-              --keepalive 10 60 \
-              --route-up '/bin/rm saml-response.txt' \
-              --auth-user-pass <( printf "%s\n%s\n" "N/A" "CRV1::${VPN_SID}::$(cat saml-response.txt)" )
+	--verb 3 --auth-nocache --inactive 3600 \
+	--proto "$PROTO" --remote "$SRV" "$PORT" \
+	--script-security 2 \
+	--keepalive 10 60 \
+	--route-up '/bin/rm saml-response.txt' \
+	--auth-user-pass <(printf "%s\n%s\n" "N/A" "CRV1::${VPN_SID}::$(cat saml-response.txt)")
