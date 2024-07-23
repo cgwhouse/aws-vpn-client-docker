@@ -1,5 +1,11 @@
-#FROM ubuntu:20.04 as builder
-FROM ubuntu:20.04 as base
+FROM ubuntu:20.04 AS builder
+
+ARG openvpn_version="2.5.1"
+
+WORKDIR /
+
+ENV TZ="America/New_York"
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
@@ -14,23 +20,13 @@ RUN apt-get update && \
   libtool \
   libssl-dev \
   net-tools \
-  dnsutils \
-  openssl \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-FROM base as builder
-
-WORKDIR /
-
-ARG openvpn_version="2.5.1"
-
-# Download OpenVPN
 RUN curl -L https://github.com/OpenVPN/openvpn/archive/v${openvpn_version}.zip -o openvpn.zip && \
   unzip openvpn.zip && \
   mv openvpn-${openvpn_version} openvpn
 
-# Patch OpenVPN using the included patch file
 COPY openvpn-v${openvpn_version}-aws.patch openvpn
 
 WORKDIR /openvpn
@@ -40,7 +36,6 @@ RUN patch -p1 < openvpn-v${openvpn_version}-aws.patch && \
   ./configure && \
   make
 
-# Download Go and run the local server
 RUN curl -L https://golang.org/dl/go1.15.4.linux-amd64.tar.gz -o go.tar.gz && \
   tar -C /usr/local -xzf go.tar.gz
 
@@ -50,10 +45,16 @@ COPY server.go .
 
 RUN go build server.go
 
-FROM base as final
+FROM ubuntu:20.04 AS final
 
-ENV TZ="America/New_York"
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  dnsutils \
+  liblzo2-dev \
+  openssl \
+  net-tools \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /openvpn/src/openvpn/openvpn /openvpn
 COPY --from=builder /server /server
