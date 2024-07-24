@@ -4,12 +4,11 @@ ARG openvpn_version="2.5.1"
 
 WORKDIR /
 
-ENV TZ="America/New_York"
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   curl \
+  ca-certificates \
+  automake \
   unzip \
   build-essential \
   autoconf \
@@ -36,6 +35,8 @@ RUN patch -p1 < openvpn-v${openvpn_version}-aws.patch && \
   ./configure && \
   make
 
+WORKDIR /
+
 RUN curl -L https://golang.org/dl/go1.15.4.linux-amd64.tar.gz -o go.tar.gz && \
   tar -C /usr/local -xzf go.tar.gz
 
@@ -46,6 +47,9 @@ COPY server.go .
 RUN go build server.go
 
 FROM ubuntu:20.04 AS final
+
+ENV TZ="America/New_York"
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
