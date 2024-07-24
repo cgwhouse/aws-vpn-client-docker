@@ -10,10 +10,12 @@ sed -i '/^auth-user-pass.*$/d' /vpn.modified.conf
 sed -i '/^auth-federate.*$/d' /vpn.modified.conf
 sed -i '/^auth-retry.*$/d' /vpn.modified.conf
 
-echo "" >>/vpn.modified.conf
-echo "script-security 2" >>/vpn.modified.conf
-echo "up /etc/openvpn/scripts/update-resolv-conf" >>/vpn.modified.conf
-echo "down /etc/openvpn/scripts/update-resolv-conf" >>/vpn.modified.conf
+{
+	echo ""
+	echo "script-security 2"
+	echo "up /etc/openvpn/scripts/update-resolv-conf"
+	echo "down /etc/openvpn/scripts/update-resolv-conf"
+} >>/vpn.modified.conf
 
 export CERT="-----BEGIN CERTIFICATE-----
 MIID7zCCAtegAwIBAgIBADANBgkqhkiG9w0BAQsFADCBmDELMAkGA1UEBhMCVVMx
@@ -40,11 +42,11 @@ iEDPfUYd/x7H4c7/I9vG+o1VTqkC50cRRj70/b17KSa7qWFiNyi2LSr2EIZkyXCn
 sSi6
 -----END CERTIFICATE-----"
 
-perl -i -0pe '$count = 0; s/-----BEGIN.*?-----END CERTIFICATE-----/(++$count == 3)?"$ENV{'CERT'}":$&/gesm;' /vpn.modified.conf
+perl -i -0pe '$count = 0; s/-----BEGIN.*?-----END CERTIFICATE-----/(++$count == 3)?"$ENV{'"'CERT'"'}":$&/gesm;' /vpn.modified.conf
 
-VPN_HOST=$(cat /vpn.modified.conf | grep 'remote ' | cut -d ' ' -f2)
-PORT=$(cat /vpn.modified.conf | grep 'remote ' | cut -d ' ' -f3)
-PROTO=$(cat /vpn.modified.conf | grep "proto " | cut -d " " -f2)
+VPN_HOST=$(grep 'remote ' <vpn.modified.conf | cut -d ' ' -f2)
+PORT=$(grep 'remote ' <vpn.modified.conf | cut -d ' ' -f3)
+PROTO=$(grep "proto " <vpn.modified.conf | cut -d " " -f2)
 
 echo "Connecting to $VPN_HOST on port $PORT/$PROTO"
 wait_file() {
